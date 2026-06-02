@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Phoneme Synthesizer - Minimal White</title>
+    <title>Phoneme Synthesizer - Back Waveform</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
         
-        /* 全体を白背景・黒文字のミニマルデザインに */
+        /* 画面全体の基準設定 */
         body { 
             margin: 0; 
             padding: 0; 
@@ -17,26 +17,31 @@
             color: #000000; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             overflow: hidden; 
-        }
-        
-        #main-container { display: flex; flex-direction: column; width: 100%; height: 100%; }
-
-        /* ================= 上部：波形モニターエリア ================= */
-        #monitor-zone { 
-            height: 25%; 
-            width: 100%; 
-            background: #ffffff; 
-            border-bottom: 1px solid #e0e0e0; 
             position: relative;
         }
+        
+        /* ================= 一番背面：リアルタイム波形キャンバス ================= */
         #waveform-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1; /* 最背面 */
+            pointer-events: none; /* タッチイベントを透過させてキーを押せるようにする */
         }
 
-        /* ================= 下部：入力エリア ================= */
-        #app { display: flex; width: 100%; height: 75%; }
+        /* ================= 前面：キーボードインターフェース ================= */
+        #app { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: flex; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 2; /* 波形より前面 */
+            background: transparent; /* 背景を透明にして波形を透かす */
+        }
         
         /* 左手エリア：25% */
         #left-zone { 
@@ -46,23 +51,24 @@
             flex-direction: column;
             align-items: center; 
             justify-content: center; 
-            border-right: 1px solid #e0e0e0;
-            background: #fafafa;
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(250, 250, 250, 0.8); /* ほんのり透ける白 */
             position: relative;
-            padding-top: 20px;
         }
 
-        /* 母音・子音の表示欄をジョイスティックの真上に配置 */
+        /* 表示欄（ジョイスティックの真上） */
         #monitor-text { 
             font-family: monospace; 
-            font-size: 14px; 
+            font-size: 15px; 
             color: #333333;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             font-weight: 600;
             text-align: center;
             pointer-events: none;
+            line-height: 1.4;
         }
 
+        /* ジョイスティックの外枠 */
         #joystick-bound { 
             width: 150px; 
             height: 150px; 
@@ -74,7 +80,7 @@
         #joystick-stick { 
             width: 50px; 
             height: 50px; 
-            background: #111111; /* スティックも黒に */
+            background: #111111; 
             border-radius: 50%; 
             position: absolute; 
             top: 48px; 
@@ -83,21 +89,21 @@
         }
         .vowel-hint { position: absolute; font-size: 15px; color: #999999; font-weight: bold; width: 20px; text-align: center; height: 20px; line-height: 20px; }
 
-        /* 右手エリア：75% */
+        /* 右手エリア：75%（子音キー特大化） */
         #right-zone { 
             width: 75%; 
             height: 100%; 
             display: flex; 
-            justify-content: space-between; 
+            justify-content: space-around; 
             align-items: center; 
-            padding: 5px 20px;
-            background: #ffffff;
+            padding: 5px 10px;
+            background: transparent; /* 完全透明にして背面波形を見せる */
         }
         
         .finger-column { 
             display: flex; 
             flex-direction: column; 
-            gap: 8px; 
+            gap: 4px; /* 縦の隙間を最小限に詰める */
             justify-content: center;
             height: 100%;
         }
@@ -111,28 +117,28 @@
         .index-sub-column {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 4px; /* 人差し指の縦の隙間も詰める */
         }
 
-        /* ボタンを洗練されたライトグレー×黒枠に */
+        /* 子音ボタンのサイズをさらに1.2倍化 (width: 75px->90px, height: 65px->80px) */
         .consonant-btn { 
-            background: #f5f5f7; 
-            border: 1px solid #d2d2d7; 
+            background: rgba(245, 245, 247, 0.9); /* 背面が少し透けるライトグレー */
+            border: 1px solid #b0b0b5; 
             color: #000000; 
-            font-size: 22px; 
-            font-weight: 500;
-            border-radius: 14px; 
-            width: 75px; 
-            height: 65px; 
+            font-size: 24px; /* 文字もさらに大きく */
+            font-weight: bold;
+            border-radius: 16px; 
+            width: 90px; 
+            height: 80px; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            transition: background 0.1s;
+            transition: background 0.05s;
         }
         .index-left .consonant-btn { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
         .index-right .consonant-btn { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
 
-        /* タップされた時はスタイリッシュに反転（黒背景に白文字） */
+        /* タップ時は反転 */
         .consonant-btn.active { 
             background: #000000 !important; 
             color: #ffffff; 
@@ -142,56 +148,52 @@
 </head>
 <body>
 
-    <div id="main-container">
-        <div id="monitor-zone">
-            <canvas id="waveform-canvas"></canvas>
+    <canvas id="waveform-canvas"></canvas>
+
+    <div id="app">
+        <div id="left-zone">
+            <div id="monitor-text">母音: - <br> 子音: -</div>
+            
+            <div id="joystick-bound">
+                <div id="joystick-stick"></div>
+                <div class="vowel-hint" style="top: 5px; left: 63px;">i</div>
+                <div class="vowel-hint" style="top: 42px; right: 10px;">u</div>
+                <div class="vowel-hint" style="bottom: 15px; right: 25px;">e</div>
+                <div class="vowel-hint" style="bottom: 15px; left: 25px;">o</div>
+                <div class="vowel-hint" style="top: 42px; left: 10px;">a</div>
+            </div>
         </div>
 
-        <div id="app">
-            <div id="left-zone">
-                <div id="monitor-text">母音: - <br> 子音: -</div>
-                
-                <div id="joystick-bound">
-                    <div id="joystick-stick"></div>
-                    <div class="vowel-hint" style="top: 5px; left: 63px;">i</div>
-                    <div class="vowel-hint" style="top: 42px; right: 10px;">u</div>
-                    <div class="vowel-hint" style="bottom: 15px; right: 25px;">e</div>
-                    <div class="vowel-hint" style="bottom: 15px; left: 25px;">o</div>
-                    <div class="vowel-hint" style="top: 42px; left: 10px;">a</div>
+        <div id="right-zone">
+            <div class="index-double-column">
+                <div class="index-sub-column index-left">
+                    <div class="consonant-btn" data-sound="y">y</div>
+                    <div class="consonant-btn" data-sound="h">h</div>
+                    <div class="consonant-btn" data-sound="n">n</div>
+                </div>
+                <div class="index-sub-column index-right">
+                    <div class="consonant-btn" data-sound="w">w</div>
+                    <div class="consonant-btn" data-sound="j">j</div>
+                    <div class="consonant-btn" data-sound="m">m</div>
                 </div>
             </div>
 
-            <div id="right-zone">
-                <div class="index-double-column">
-                    <div class="index-sub-column index-left">
-                        <div class="consonant-btn" data-sound="y">y</div>
-                        <div class="consonant-btn" data-sound="h">h</div>
-                        <div class="consonant-btn" data-sound="n">n</div>
-                    </div>
-                    <div class="index-sub-column index-right">
-                        <div class="consonant-btn" data-sound="w">w</div>
-                        <div class="consonant-btn" data-sound="j">j</div>
-                        <div class="consonant-btn" data-sound="m">m</div>
-                    </div>
-                </div>
+            <div class="finger-column">
+                <div class="consonant-btn" data-sound="g">g</div>
+                <div class="consonant-btn" data-sound="k">k</div>
+                <div class="consonant-btn" data-sound="b">b</div>
+            </div>
 
-                <div class="finger-column">
-                    <div class="consonant-btn" data-sound="g">g</div>
-                    <div class="consonant-btn" data-sound="k">k</div>
-                    <div class="consonant-btn" data-sound="b">b</div>
-                </div>
+            <div class="finger-column">
+                <div class="consonant-btn" data-sound="r">r</div>
+                <div class="consonant-btn" data-sound="s">s</div>
+                <div class="consonant-btn" data-sound="z">z</div>
+            </div>
 
-                <div class="finger-column">
-                    <div class="consonant-btn" data-sound="r">r</div>
-                    <div class="consonant-btn" data-sound="s">s</div>
-                    <div class="consonant-btn" data-sound="z">z</div>
-                </div>
-
-                <div class="finger-column">
-                    <div class="consonant-btn" data-sound="p">p</div>
-                    <div class="consonant-btn" data-sound="t">t</div>
-                    <div class="consonant-btn" data-sound="d">d</div>
-                </div>
+            <div class="finger-column">
+                <div class="consonant-btn" data-sound="p">p</div>
+                <div class="consonant-btn" data-sound="t">t</div>
+                <div class="consonant-btn" data-sound="d">d</div>
             </div>
         </div>
     </div>
@@ -216,8 +218,8 @@
         }
 
         function resizeCanvas() {
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
@@ -291,20 +293,20 @@
             }
         }
 
-        // ================= リアルタイム波形描画（ミニマル黒線） =================
+        // ================= 背面全体の波形描画ループ =================
         function drawWaveform() {
             requestAnimationFrame(drawWaveform);
             if (!analyser) return;
 
             analyser.getByteTimeDomainData(dataArray);
 
-            // 残像を消して真っ白な背景を維持
+            // 画面全体を白でクリア
             canvasCtx.fillStyle = '#ffffff';
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 線の設定：シンプルな黒色の細い線
-            canvasCtx.lineWidth = 1.5;
-            canvasCtx.strokeStyle = '#111111';
+            // 背景の中央を走る黒い細線
+            canvasCtx.lineWidth = 1.0;
+            canvasCtx.strokeStyle = 'rgba(0, 0, 0, 0.15)'; // 邪魔にならない薄めの黒
             canvasCtx.beginPath();
 
             const sliceWidth = canvas.width * 1.0 / bufferLength;
@@ -312,7 +314,7 @@
 
             for (let i = 0; i < bufferLength; i++) {
                 const v = dataArray[i] / 128.0; 
-                const y = v * canvas.height / 2;
+                const y = v * canvas.height / 2; // 画面の縦中央を基準に振幅
 
                 if (i === 0) {
                     canvasCtx.moveTo(x, y);
