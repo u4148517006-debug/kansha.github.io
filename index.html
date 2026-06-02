@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Phoneme Keyboard Prototype</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; background: #1a1a1a; color: white; font-family: sans-serif; overflow: hidden; }
+        
+        /* 画面全体のレイアウト */
+        #app { display: flex; width: 100%; height: 100%; }
+        
+        /* 左側：ジョイスティックエリア */
+        #left-zone { width: 40%; height: 100%; position: relative; border-right: 1px solid #333; display: flex; align-items: flex-end; padding: 20px; }
+        #joystick-bound { width: 150px; height: 150px; background: #333; border-radius: 50%; position: relative; }
+        #joystick-stick { width: 60px; height: 60px; background: #ff4757; border-radius: 50%; position: absolute; top: 45px; left: 45px; }
+
+        /* 右側：子音ボタンエリア */
+        #right-zone { width: 60%; height: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px; align-content: center; }
+        .consonant-btn { background: #2f3542; border: none; color: white; font-size: 24px; border-radius: 10px; height: 70px; touch-action: none; }
+        .consonant-btn:active { background: #70a1ff; }
+
+        /* モニター画面 */
+        #monitor { position: absolute; top: 20px; left: 20px; font-size: 18px; font-family: monospace; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 50px; }
+    </style>
+</head>
+<body>
+
+    <div id="monitor">母音: - | 子音: -</div>
+
+    <div id="app">
+        <div id="left-zone">
+            <div id="joystick-bound">
+                <div id="joystick-stick"></div>
+            </div>
+        </div>
+
+        <div id="right-zone">
+            <button class="consonant-btn" data-sound="k">k</button>
+            <button class="consonant-btn" data-sound="s">s</button>
+            <button class="consonant-btn" data-sound="t">t</button>
+            <button class="consonant-btn" data-sound="n">n</button>
+            <button class="consonant-btn" data-sound="h">h</button>
+            <button class="consonant-btn" data-sound="m">m</button>
+            <button class="consonant-btn" data-sound="y">y</button>
+            <button class="consonant-btn" data-sound="r">r</button>
+            <button class="consonant-btn" data-sound="b">b</button>
+            <button class="consonant-btn" data-sound="d">d</button>
+            <button class="consonant-btn" data-sound="z">z</button>
+        </div>
+    </div>
+
+    <script>
+        const monitor = document.getElementById('monitor');
+        const stick = document.getElementById('joystick-stick');
+        const bound = document.getElementById('joystick-bound');
+        
+        let currentVowel = "-";
+        let currentConsonant = "-";
+        const vowels = ["あ", "い", "う", "え", "お"]; // 72度ごとの割り当て用
+
+        function updateMonitor() {
+            monitor.innerText = `母音: ${currentVowel} | 子音: ${currentConsonant}`;
+        }
+
+        // --- ジョイスティックのロジック ---
+        bound.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = bound.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let x = touch.clientX - centerX;
+            let y = touch.clientY - centerY;
+            const distance = Math.sqrt(x*x + y*y);
+            const maxRadius = rect.width / 2;
+
+            if (distance > maxRadius) {
+                x = (x / distance) * maxRadius;
+                y = (y / distance) * maxRadius;
+            }
+
+            // スティックの視覚的移動
+            stick.style.transform = `translate(${x}px, ${y}px)`;
+
+            // 角度計算 (0 〜 2*PI)
+            if (distance > 20) { // 少し倒した時だけ検知
+                let angle = Math.atan2(y, x) * (180 / Math.PI); // -180 ~ 180
+                if (angle < 0) angle += 360; // 0 ~ 360 に変換
+                
+                // 72度ごとに5分割
+                const index = Math.floor(angle / 72) % 5;
+                currentVowel = vowels[index];
+            } else {
+                currentVowel = "-";
+            }
+            updateMonitor();
+        });
+
+        bound.addEventListener('touchend', () => {
+            stick.style.transform = `translate(0px, 0px)`;
+            currentVowel = "-";
+            updateMonitor();
+        });
+
+        // --- 子音ボタンのロジック ---
+        document.querySelectorAll('.consonant-btn').forEach(btn => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                currentConsonant = btn.getAttribute('data-sound');
+                updateMonitor();
+                
+                // TODO: ここでWeb Audio APIを叩いて「子音＋現在の母音」の音をトリガーする
+            });
+            btn.addEventListener('touchend', () => {
+                currentConsonant = "-";
+                updateMonitor();
+            });
+        });
+    </script>
+</body>
+</html>
