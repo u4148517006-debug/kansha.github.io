@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Phoneme Synthesizer - Solid Grid & Heavy Wave</title>
+    <title>Phoneme Synthesizer - Perfect Layout & Audio</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
         
@@ -11,7 +11,8 @@
             margin: 0; 
             padding: 0; 
             width: 100vw; 
-            height: 100vh; 
+            /* JSで動的に高さを制御するため初期値は100% */
+            height: 100%; 
             background: #ffffff; 
             color: #000000; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
@@ -19,13 +20,13 @@
             position: relative;
         }
         
-        /* ================= 最背面：リアルタイム波形（振幅強化版） ================= */
+        /* ================= 最背面：リアルタイム波形 ================= */
         #waveform-canvas {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             z-index: 1; 
             pointer-events: none; 
         }
@@ -67,74 +68,69 @@
         }
 
         #joystick-bound { 
-            width: 150px; 
-            height: 150px; 
+            width: 140px; 
+            height: 140px; 
             background: #ffffff; 
             border: 2px solid #b0b0b5; 
             border-radius: 50%; 
             position: relative; 
         }
         #joystick-stick { 
-            width: 50px; 
-            height: 50px; 
+            width: 46px; 
+            height: 46px; 
             background: #111111; 
             border-radius: 50%; 
             position: absolute; 
-            top: 48px; 
-            left: 48px; 
+            top: 45px; 
+            left: 45px; 
             pointer-events: none; 
         }
         .vowel-hint { position: absolute; font-size: 15px; color: #999999; font-weight: bold; width: 20px; text-align: center; height: 20px; line-height: 20px; }
 
-        /* 右手エリア：75%（全面隙間なしの完全ソリッド化） */
+        /* 右手エリア：75%（完全ソリッドグリッド） */
         #right-zone { 
             width: 75%; 
             height: 100%; 
             display: flex; 
             justify-content: stretch; 
             align-items: stretch; 
-            padding: 0; /* 外側の余白をゼロに */
+            padding: 0; 
             background: transparent; 
         }
         
-        /* 指ごとの縦列を画面いっぱいに広げる */
         .finger-column { 
             display: flex; 
             flex-direction: column; 
-            gap: 0px; /* 縦の隙間を完全ゼロ */
-            flex: 1; /* 横幅を均等に引き伸ばす */
+            gap: 0px; 
+            flex: 1; 
         }
 
-        /* 人差し指用の2列コンテナ */
         .index-double-column {
             display: flex;
             gap: 0px; 
-            flex: 2; /* 2列分なので他の指の2倍の幅を持たせる */
+            flex: 2; 
         }
         .index-sub-column {
             display: flex;
             flex-direction: column;
-            gap: 0px; /* 縦の隙間ゼロ */
+            gap: 0px; 
             flex: 1;
         }
 
-        /* 子音ボタン：隙間なく敷き詰めるために100%に */
         .consonant-btn { 
-            background: rgba(248, 248, 250, 0.85); /* 波形が透ける薄いグレー */
-            border: 0.5px solid rgba(0, 0, 0, 0.15); /* 境界線は細く */
+            background: rgba(248, 248, 250, 0.85); 
+            border: 0.5px solid rgba(0, 0, 0, 0.12); 
             color: #000000; 
             font-size: 24px; 
             font-weight: bold;
-            border-radius: 0px; /* 敷き詰めるために丸みをゼロに変更 */
+            border-radius: 0px; 
             width: 100%; 
-            height: 100%; /* 親要素の高さに合わせて自動引き伸ばし */
+            height: 100%; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            transition: background 0.05s;
         }
 
-        /* タップ時は完全に反転して黒に */
         .consonant-btn.active { 
             background: #000000 !important; 
             color: #ffffff; 
@@ -152,11 +148,11 @@
             
             <div id="joystick-bound">
                 <div id="joystick-stick"></div>
-                <div class="vowel-hint" style="top: 5px; left: 63px;">i</div>
-                <div class="vowel-hint" style="top: 42px; right: 10px;">u</div>
-                <div class="vowel-hint" style="bottom: 15px; right: 25px;">e</div>
-                <div class="vowel-hint" style="bottom: 15px; left: 25px;">o</div>
-                <div class="vowel-hint" style="top: 42px; left: 10px;">a</div>
+                <div class="vowel-hint" style="top: 5px; left: 58px;">i</div>
+                <div class="vowel-hint" style="top: 40px; right: 10px;">u</div>
+                <div class="vowel-hint" style="bottom: 15px; right: 22px;">e</div>
+                <div class="vowel-hint" style="bottom: 15px; left: 22px;">o</div>
+                <div class="vowel-hint" style="top: 40px; left: 10px;">a</div>
             </div>
         </div>
 
@@ -207,20 +203,28 @@
         let currentVowel = "-";
         let currentConsonant = "-";
         const vowels = ["i", "u", "e", "o", "a"];
-        const MAX_RADIUS = 48; 
+        const MAX_RADIUS = 45; 
 
         function updateMonitor() {
             monitorText.innerHTML = `母音: ${currentVowel}<br>子音: ${currentConsonant}`;
         }
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        // ================= スマホ描画範囲の厳密取得ロジック =================
+        function updateLayoutSize() {
+            // アドレスバー等を除いた「実際の表示可能ピクセル」を取得
+            const actualHeight = window.innerHeight;
+            const actualWidth = window.innerWidth;
+            
+            document.body.style.height = actualHeight + "px";
+            canvas.width = actualWidth;
+            canvas.height = actualHeight;
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        // 初期化時と画面回転・リサイズ時に強制適用
+        window.addEventListener('resize', updateLayoutSize);
+        window.addEventListener('orientationchange', updateLayoutSize);
+        updateLayoutSize();
 
-        // ================= 音声合成 ＆ 波形解析 =================
+        // ================= 音声合成システム (母音＋子音) =================
         let audioCtx = null;
         let mainGain = null;
         let voiceOsc = null;
@@ -254,17 +258,18 @@
             mainGain.connect(analyser);
             analyser.connect(audioCtx.destination);
 
+            // 母音用音源（声帯の鋸歯状波）
             voiceOsc = audioCtx.createOscillator();
             voiceOsc.type = 'sawtooth';
-            voiceOsc.frequency.setValueAtTime(135, audioCtx.currentTime);
+            voiceOsc.frequency.setValueAtTime(130, audioCtx.currentTime);
 
             filter1 = audioCtx.createBiquadFilter();
             filter1.type = 'bandpass';
-            filter1.Q.setValueAtTime(8, audioCtx.currentTime);
+            filter1.Q.setValueAtTime(10, audioCtx.currentTime);
 
             filter2 = audioCtx.createBiquadFilter();
             filter2.type = 'bandpass';
-            filter2.Q.setValueAtTime(8, audioCtx.currentTime);
+            filter2.Q.setValueAtTime(10, audioCtx.currentTime);
 
             voiceOsc.connect(filter1);
             voiceOsc.connect(filter2);
@@ -275,21 +280,90 @@
             drawWaveform();
         }
 
+        // 母音の更新
         function updateVowelSound(vowel) {
             if (!audioCtx) initAudio();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
             if (vowel === "-") {
-                mainGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                mainGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.04);
             } else {
                 const freq = formantFrequencies[vowel];
-                filter1.frequency.setTargetAtTime(freq.f1, audioCtx.currentTime, 0.08);
-                filter2.frequency.setTargetAtTime(freq.f2, audioCtx.currentTime, 0.08);
-                mainGain.gain.setTargetAtTime(0.2, audioCtx.currentTime, 0.03); 
+                filter1.frequency.setTargetAtTime(freq.f1, audioCtx.currentTime, 0.05);
+                filter2.frequency.setTargetAtTime(freq.f2, audioCtx.currentTime, 0.05);
+                mainGain.gain.setTargetAtTime(0.25, audioCtx.currentTime, 0.02); 
             }
         }
 
-        // ================= 背面波形描画（振幅強化・極太化） =================
+        // ★新規：子音のアタック音をトリガーする関数
+        function triggerConsonantSound(consonant) {
+            if (!audioCtx) initAudio();
+            const now = audioCtx.currentTime;
+
+            // 1. ノイズ系（s, k, t, p, h）用のバッファノイズ生成
+            if (["s", "k", "t", "p", "h"].includes(consonant)) {
+                const bufferSize = audioCtx.sampleRate * 0.08; // 0.08秒の短いノイズ
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noiseNode = audioCtx.createBufferSource();
+                noiseNode.buffer = buffer;
+
+                const noiseFilter = audioCtx.createBiquadFilter();
+                const noiseGain = audioCtx.createGain();
+
+                // 子音ごとの特性フィルター設定
+                if (consonant === "s") {
+                    noiseFilter.type = "highpass";
+                    noiseFilter.frequency.setValueAtTime(6000, now); // 高音の擦れ音
+                    noiseGain.gain.setValueAtTime(0.3, now);
+                } else if (consonant === "h") {
+                    noiseFilter.type = "bandpass";
+                    noiseFilter.frequency.setValueAtTime(2500, now); // 息の音
+                    noiseGain.gain.setValueAtTime(0.2, now);
+                } else { // k, t, p 破裂音系
+                    noiseFilter.type = "bandpass";
+                    noiseFilter.frequency.setValueAtTime(1500, now);
+                    noiseGain.gain.setValueAtTime(0.4, now);
+                }
+
+                // 急激に減衰させる（エンベロープ）
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+
+                noiseNode.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(analyser); // 波形に映るようアナライザーへ接続
+
+                noiseNode.start(now);
+                noiseNode.stop(now + 0.08);
+            } 
+            // 2. 有声音・半母音系（ピッチの急変やクリックによるアタック感）
+            else if (consonant !== "-") {
+                const clickOsc = audioCtx.createOscillator();
+                const clickGain = audioCtx.createGain();
+                
+                clickOsc.type = "sine";
+                // m, n などの鼻音は低め、y, w などの半母音は少し高めの周波数から落とす
+                let startFreq = ["m","n","b","d","g"].includes(consonant) ? 90 : 300;
+                
+                clickOsc.frequency.setValueAtTime(startFreq, now);
+                clickOsc.frequency.exponentialRampToValueAtTime(130, now + 0.05);
+
+                clickGain.gain.setValueAtTime(0.3, now);
+                clickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+
+                clickOsc.connect(clickGain);
+                clickGain.connect(analyser);
+
+                clickOsc.start(now);
+                clickOsc.stop(now + 0.06);
+            }
+        }
+
+        // ================= 背面波形描画 =================
         function drawWaveform() {
             requestAnimationFrame(drawWaveform);
             if (!analyser) return;
@@ -299,7 +373,6 @@
             canvasCtx.fillStyle = '#ffffff';
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 線を少し太く（1.0 -> 2.5）して存在感をアップ
             canvasCtx.lineWidth = 2.5;
             canvasCtx.strokeStyle = 'rgba(0, 0, 0, 0.25)'; 
             canvasCtx.beginPath();
@@ -308,12 +381,10 @@
             let x = 0;
 
             for (let i = 0; i < bufferLength; i++) {
-                // 通常は 128 が中央。そこからのズレ（振幅）を計算
                 const v = dataArray[i] / 128.0; 
-                
-                // 振幅の計算ロジックを変更（中央からの高低差を3倍にして、ダイナミックにハネさせる）
                 const centerY = canvas.height / 2;
-                const targetY = centerY + (v * centerY - centerY) * 3.0;
+                // 3.5倍のダイナミック振幅
+                const targetY = centerY + (v * centerY - centerY) * 3.5;
 
                 if (i === 0) {
                     canvasCtx.moveTo(x, targetY);
@@ -333,99 +404,4 @@
             if (!audioCtx) initAudio();
 
             let joystickTouch = null;
-            for (let i = 0; i < e.touches.length; i++) {
-                if (e.touches[i].clientX < window.innerWidth * 0.25) {
-                    joystickTouch = e.touches[i];
-                    break;
-                }
-            }
-            if (!joystickTouch) return;
-
-            const rect = bound.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            const dx = joystickTouch.clientX - centerX;
-            const dy = joystickTouch.clientY - centerY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const angleRadian = Math.atan2(dy, dx);
-
-            let stickX = dx;
-            let stickY = dy;
-            if (distance > MAX_RADIUS) {
-                stickX = Math.cos(angleRadian) * MAX_RADIUS;
-                stickY = Math.sin(angleRadian) * MAX_RADIUS;
-            }
-
-            stick.style.transform = `translate(${stickX}px, ${stickY}px)`;
-
-            if (distance > 20) { 
-                let angleDegree = angleRadian * (180 / Math.PI);
-                angleDegree = (angleDegree + 450) % 360; 
-
-                const index = Math.floor(angleDegree / 72) % 5;
-                currentVowel = vowels[index];
-            } else {
-                currentVowel = "-";
-            }
-            
-            updateVowelSound(currentVowel);
-            updateMonitor();
-        }
-
-        function resetJoystick(e) {
-            let leftTouchExists = false;
-            for (let i = 0; i < e.touches.length; i++) {
-                if (e.touches[i].clientX < window.innerWidth * 0.25) {
-                    leftTouchExists = true;
-                    break;
-                }
-            }
-            if (!leftTouchExists) {
-                stick.style.transform = `translate(0px, 0px)`;
-                currentVowel = "-";
-                updateVowelSound("-");
-                updateMonitor();
-            }
-        }
-
-        window.addEventListener('touchstart', (e) => { if (e.touches[0].clientX < window.innerWidth * 0.25) handleJoystick(e); });
-        window.addEventListener('touchmove', handleJoystick);
-        window.addEventListener('touchend', resetJoystick);
-        window.addEventListener('touchcancel', resetJoystick);
-
-
-        // ================= 子音ボタン制御（グリッド全面タッチ） =================
-        function checkButtonsTouch(e) {
-            e.preventDefault();
-            
-            buttons.forEach(btn => btn.classList.remove('active'));
-            let activeSound = "-";
-
-            for (let i = 0; i < e.touches.length; i++) {
-                const touch = e.touches[i];
-                
-                if (touch.clientX >= window.innerWidth * 0.25) {
-                    buttons.forEach(btn => {
-                        const rect = btn.getBoundingClientRect();
-                        if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-                            touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
-                            btn.classList.add('active');
-                            activeSound = btn.getAttribute('data-sound');
-                        }
-                    });
-                }
-            }
-
-            currentConsonant = activeSound;
-            updateMonitor();
-        }
-
-        rightZone.addEventListener('touchstart', checkButtonsTouch);
-        rightZone.addEventListener('touchmove', checkButtonsTouch);
-        rightZone.addEventListener('touchend', checkButtonsTouch);
-        rightZone.addEventListener('touchcancel', checkButtonsTouch);
-
-    </script>
-</body>
-</html>
+            for (let i = 0; i < e.touches.length
