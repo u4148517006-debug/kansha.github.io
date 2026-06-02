@@ -2,61 +2,151 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, orientation=landscape">
-    <title>Phoneme Synthesizer UI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Phoneme Keyboard Fix</title>
     <style>
+        /* 全画面リセット（横画面前提） */
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
-        body { margin: 0; padding: 0; width: 100vw; height: 100vh; background: #121212; color: white; font-family: 'Courier New', monospace; overflow: hidden; display: flex; flex-direction: column; }
+        body { margin: 0; padding: 0; width: 100vw; height: 100vh; background: #121212; color: white; font-family: sans-serif; overflow: hidden; }
         
-        /* モニターエリア */
-        #monitor { height: 15%; width: 100%; background: #000; border-bottom: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #0f0; text-shadow: 0 0 5px #0f0; }
-
-        /* メイン入力エリア */
-        #input-area { display: flex; flex: 1; width: 100%; height: 85%; }
+        /* 画面全体のレイアウト：左右に50%ずつ分割 */
+        #app { display: flex; width: 100%; height: 100%; }
         
-        /* 左側：ジョイスティックエリア（母音） */
-        #left-zone { width: 35%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; padding: 10px; border-right: 1px solid #222; }
-        #joystick-bound { width: 180px; height: 180px; background: rgba(255,255,255,0.05); border: 2px solid #444; border-radius: 50%; position: relative; }
-        #joystick-stick { width: 70px; height: 70px; background: #ff4757; border-radius: 50%; position: absolute; top: 55px; left: 55px; box-shadow: 0 0 15px rgba(255,71,87,0.5); }
+        /* ================= 左手エリア（母音） ================= */
+        #left-zone { 
+            width: 40%; 
+            height: 100%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-right: 2px solid #333;
+            background: #1a1a1a;
+        }
+        /* 外側の円（ベース） */
+        #joystick-bound { 
+            width: 180px; 
+            height: 180px; 
+            background: #2a2a2a; 
+            border: 3px solid #555; 
+            border-radius: 50%; 
+            position: relative; 
+        }
+        /* 内側の赤いスティック */
+        #joystick-stick { 
+            width: 60px; 
+            height: 60px; 
+            background: #ff4757; 
+            border-radius: 50%; 
+            position: absolute; 
+            /* 真ん中に配置 */
+            top: 57px; 
+            left: 57px; 
+            pointer-events: none; /* タッチイベントの邪魔をしない */
+        }
+        /* ガイド文字 */
+        .vowel-hint { position: absolute; font-size: 14px; color: #888; font-weight: bold; width: 20px; text-align: center; }
+        #hint-a { top: 5px; left: 80px; }
+        #hint-i { top: 80px; right: 5px; }
+        #hint-u { bottom: 5px; left: 80px; }
+        #hint-e { top: 80px; left: 5px; }
+        #hint-o { top: 25px; right: 25px; }
+
+        /* ================= 右手エリア（子音） ================= */
+        #right-zone { 
+            width: 60%; 
+            height: 100%; 
+            display: flex; 
+            justify-content: space-around; /* 4本の指の列を均等に配置 */
+            align-items: center; 
+            padding: 10px;
+            background: #151515;
+        }
         
-        /* 母音ラベルの配置 */
-        .vowel-label { position: absolute; font-size: 1.2rem; font-weight: bold; color: rgba(255,255,255,0.5); }
-        #vowel-a { top: 5px; left: 50%; transform: translateX(-50%); } /* 北 */
-        #vowel-i { top: 50%; right: 5px; transform: translateY(-50%); } /* 東 */
-        #vowel-u { bottom: 5px; left: 50%; transform: translateX(-50%); } /* 南 */
-        #vowel-e { top: 50%; left: 5px; transform: translateY(-50%); } /* 西 */
-        #vowel-o { top: 5px; right: 5px; } /* 間（時計回り用） */
+        /* 指ごとの縦一列のコンテナ */
+        .finger-column { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            justify-content: center;
+        }
 
-        /* 右側：子音ボタンエリア（人・中・薬・小） */
-        #right-zone { width: 65%; height: 100%; display: flex; justify-content: space-evenly; align-items: center; padding: 10px 20px; }
+        /* 人差し指の hj グループと bn/m グループを少し離すための隙間 */
+        .index-gap {
+            margin-top: 15px;
+        }
         
-        .finger-column { display: flex; flex-direction: column; gap: 10px; height: 90%; justify-content: center; }
-        .consonant-btn { background: #262626; border: 1px solid #3a3a3a; color: #aaa; font-size: 1.3rem; border-radius: 8px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; transition: background 0.1s; }
-        .consonant-btn:active, .consonant-btn.active { background: #70a1ff; color: #000; border-color: #70a1ff; box-shadow: 0 0 10px #70a1ff; }
+        /* 子音ボタンの共通スタイル */
+        .consonant-btn { 
+            background: #2d3436; 
+            border: 2px solid #4b5563; 
+            color: #dfe4ea; 
+            font-size: 18px; 
+            font-weight: bold;
+            border-radius: 12px; 
+            width: 65px; 
+            height: 55px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        }
+        /* 押されている時の色（マルチタッチ対応用） */
+        .consonant-btn.active { 
+            background: #2ed573 !important; 
+            color: black; 
+            border-color: #2ed573;
+        }
 
-        /* 人差し指のｈｊｂｎを少し離す */
-        .index-finger-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 15px; } 
-
+        /* 画面上部中央のデバッグモニター */
+        #monitor { 
+            position: absolute; 
+            top: 10px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: rgba(0,0,0,0.8); 
+            padding: 8px 16px; 
+            border-radius: 20px; 
+            font-family: monospace; 
+            font-size: 16px; 
+            color: #00ff00;
+            z-index: 100;
+            border: 1px solid #333;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-    <div id="monitor">SOUND: - | V: - | C: -</div>
+    <div id="monitor">V: - | C: -</div>
 
-    <div id="input-area">
+    <div id="app">
         <div id="left-zone">
             <div id="joystick-bound">
                 <div id="joystick-stick"></div>
-                <div class="vowel-label" id="vowel-a">A</div>
-                <div class="vowel-label" id="vowel-i">I</div>
-                <div class="vowel-label" id="vowel-u">U</div>
-                <div class="vowel-label" id="vowel-e">E</div>
-                <div class="vowel-label" id="vowel-o">O</div>
+                <div class="vowel-hint" id="hint-a">a</div>
+                <div class="vowel-hint" id="hint-i">i</div>
+                <div class="vowel-hint" id="hint-u">u</div>
+                <div class="vowel-hint" id="hint-e">e</div>
+                <div class="vowel-hint" id="hint-o">o</div>
             </div>
         </div>
 
         <div id="right-zone">
             <div class="finger-column">
-                <div class="index-finger-group">
-                    <div class="consonant-btn" data-sound="y">y</div>
-                    <div class="consonant-btn" data-
+                <div class="consonant-btn" data-sound="y">y</div>
+                <div class="consonant-btn" data-sound="hj">hj</div>
+                <div class="consonant-btn index-gap" data-sound="bn">bn</div>
+                <div class="consonant-btn" data-sound="m">m</div>
+            </div>
+
+            <div class="finger-column">
+                <div class="consonant-btn" data-sound="g">g</div>
+                <div class="consonant-btn" data-sound="k">k</div>
+            </div>
+
+            <div class="finger-column">
+                <div class="consonant-btn" data-sound="r">r</div>
+                <div class="consonant-btn" data-sound="s">s</div>
+                <div class="consonant-btn" data-sound="z">z</div>
+            </div>
+
+            <div class="finger-
